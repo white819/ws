@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="
+	http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd 
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context-3.0.xsd
+	http://www.springframework.org/schema/tx 
+	http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+	http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+
+
+	<context:component-scan base-package="com.service" />
+	<context:annotation-config />
+
+	<bean id="transactionAwareDataSource"
+		class="org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy">
+		<constructor-arg ref="dataSource" />
+	</bean>
+	
+	<!-- transaction END -->
+	
+	<bean id="applicationHelper" class="com.common.ApplicationHelper"></bean>
+
+	<bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource">
+		<constructor-arg>
+			<bean class="com.zaxxer.hikari.HikariConfig">
+				<constructor-arg>
+					<props>
+						<prop key="dataSource.url">jdbc:mysql://127.0.0.1:3306/bim</prop>
+						<prop key="dataSource.user">root</prop>
+						<prop key="dataSource.password">123456</prop>
+						<prop key="dataSource.portNumber">3306</prop>
+					</props>
+				</constructor-arg>
+				<property name="dataSourceClassName"
+					value="com.mysql.jdbc.jdbc2.optional.MysqlDataSource" />
+			</bean>
+		</constructor-arg>
+	</bean>
+
+	<!-- MYBATIS START -->
+	<bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+       <!-- 指定数据源 -->
+    <property name="dataSource" ref="dataSource"/>
+    <!-- 指定Jpa持久化实现厂商类,这里以Hibernate为例 -->
+    <property name="jpaVendorAdapter" ref="hibernateJpaVendorAdapter"/>
+    <!-- 指定Entity实体类包路径 -->
+    <property name="packagesToScan" >
+      <array>
+        <value>com.jpa.model</value>
+      </array>
+    </property>
+    <!-- 指定JPA属性；如Hibernate中指定是否显示SQL的是否显示、方言等 -->
+    <property name="jpaProperties">
+      <props>
+        <prop key="hibernate.dialect">org.hibernate.dialect.MySQL5Dialect</prop>
+        <prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
+        <prop key="hibernate.cache.provider_class">org.hibernate.cache.NoCacheProvider</prop>
+        <prop key="hibernate.show_sql">true</prop>
+        <prop key="hibernate.format_sql">true</prop>
+        <prop key="hibernate.hbm2ddl.auto">validate</prop>
+      </props>
+    </property>
+  </bean>
+  
+   <!-- 重要配置：启用扫描并自动创建代理的功能  -->
+  <jpa:repositories base-package="com.jpa.repository"  transaction-manager-ref="transactionManager" entity-manager-factory-ref="entityManagerFactory"/>
+  
+  <!-- Hibernate对Jpa的实现 -->
+  <bean id="hibernateJpaVendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"/>
+
+  <!-- Jpa 事务管理器  -->
+  <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+    <property name="entityManagerFactory" ref="entityManagerFactory"/>
+  </bean>
+
+  <!-- 开启注解事务 -->
+  <tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true" />
+	
+	<!-- MYBATIS END -->	 
+
+
+	<!-- SHiro -->
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+	    <property name="securityManager" ref="securityManager"/>
+	   <!--  override these for application-specific URLs if you like: -->
+	    <property name="loginUrl" value="http://localhost:18080"/>
+	    <property name="successUrl" value="/manage/index.html"/>
+	    <!--  <property name="unauthorizedUrl" value="/unauthorized.html"/>  -->
+	    <property name="filterChainDefinitions">
+	        <value>
+	        	<!-- login html -->
+	        	/ = anon
+	            /menjin/auth/** = roles[admin]
+	            /menjin/unauth/getUsers = perms[get]
+	            /menjin/role/** = roles[admin]
+	            <!-- authc html -->  
+	            /manage/** = authc, roles[admin]
+	        </value>
+	    </property>
+	</bean>
+	
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+	    <!-- Single realm app.  If you have multiple realms, use the 'realms' property instead. -->
+	    <property name="realm" ref="jdbcRealm"/>
+	    <!-- By default the servlet container sessions will be used.  Uncomment this line
+	         to use shiro's native sessions (see the JavaDoc for more): -->
+	    <!-- <property name="sessionMode" value="native"/> -->
+	</bean>
+	
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+	
+	<!-- Define the Shiro Realm implementation you want to use to connect to your back-end -->
+	<!-- security datasource: -->
+	
+	<!-- <bean id="userRealm" class="com.menjin.realm.UserRealm">
+	 	<property name="dataSource" ref="dataSource" />  
+		 <property name="authenticationQuery"  
+        value="select u.password from user u where u.name = ?" />  
+    <property name="userRolesQuery"  
+        value="SELECT r.name,u.name
+				FROM role r
+				LEFT JOIN role_user ru ON r.id = ru.roleid
+				LEFT JOIN user u ON u.id = ru.userid
+				where u.name = ? " />  
+    <property name="permissionsQuery"  
+        value="SELECT p.name,r.name
+				FROM permission p
+				LEFT JOIN permission_role pr ON p.id = pr.permissionid
+				LEFT JOIN role r ON r.id = pr.roleid
+				where r.name = ? " />   
+	<property name="permissionsLookupEnabled" value="true" />  
+	</bean> -->
+	<bean id="jdbcRealm" class="org.apache.shiro.realm.jdbc.JdbcRealm">
+	 	<property name="dataSource" ref="dataSource" />  
+		 <property name="authenticationQuery"  
+        value="select u.password from user u where u.name = ?" />  
+    <property name="userRolesQuery"  
+        value="SELECT r.name,u.name
+				FROM role r
+				LEFT JOIN role_user ru ON r.id = ru.roleid
+				LEFT JOIN user u ON u.id = ru.userid
+				where u.name = ? " />  
+    <property name="permissionsQuery"  
+        value="SELECT p.name,r.name
+				FROM permission p
+				LEFT JOIN permission_role pr ON p.id = pr.permissionid
+				LEFT JOIN role r ON r.id = pr.roleid
+				where r.name = ? " />   
+	<property name="permissionsLookupEnabled" value="true" />  
+	</bean>
+
+</beans>
