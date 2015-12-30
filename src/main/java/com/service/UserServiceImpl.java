@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import com.ws.bean.User;
 import com.jpa.repository.UserRepository;
 
+import java.util.List;
+
 @Service
 public  class UserServiceImpl implements UserService{
 
@@ -53,8 +55,32 @@ public  class UserServiceImpl implements UserService{
 	@Override
 	public User addUser(User user) {
 		// TODO Auto-generated method stub
-		//userDao.insertUser(user);
-		return user;
+		return userRepository.save(user);
+	}
+
+	@Override
+	public List<UserEntity> findAll () {
+		// TODO Auto-generated method stub
+		return userRepository.findAll();
+	}
+
+	@Override
+	public User findById(int id) {
+		// TODO Auto-generated method stub
+		return (User)userRepository.findOne(id);
+	}
+
+	@Override
+	public User updUser(User user) {
+		// TODO Auto-generated method stub
+		UserEntity userEntity = userRepository.findOne(user.getId());
+		BeanUtils.copyProperties(user, userEntity);
+		return (User)userRepository.save(userEntity);
+	}
+
+	public void delById(int id) {
+		// TODO Auto-generated method stub
+		userRepository.delete(id);
 	}
 
 

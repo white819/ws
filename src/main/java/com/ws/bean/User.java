@@ -1,10 +1,12 @@
 package com.ws.bean;
 
+import com.jpa.model.UserEntity;
+
 /**
  * Created by machaox on 12/28/2015.
  */
 
-public class User {
+public class User extends UserEntity {
     private int id;
     private String name;
     private String password;
