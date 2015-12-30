@@ -1,0 +1,22 @@
+<div class = "container">
+  <div class = "row" >
+
+    <form class="form-horizontal" role="form">
+        <fieldset>
+            <legend>LogIn</legend>
+           <div class="form-group">
+              <label class="col-sm-2 control-label" for="ds_host">UserName</label>
+              <div class="col-sm-4">
+                 <input class="form-control" id="ds_host" type="text" placeholder="username" ng-model="userName"/>
+              </div>
+              <label class="col-sm-2 control-label" for="ds_name">Password</label>
+              <div class="col-sm-4">
+                 <input class="form-control" id="ds_name" type="text" placeholder="password" ng-model="passWord"/>
+              </div>
+           </div>
+           <button class="btn btn-primary" data-toggle="button" ng-click="login()">LogIn</button>
+        </fieldset>     
+        <span class="text-danger" ng-show="alert">{{alert.msg}}</span>
+    </form>
+
+  </div>
